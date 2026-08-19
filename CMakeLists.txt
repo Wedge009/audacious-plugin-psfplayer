@@ -27,7 +27,33 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_compile_options(-ffunction-sections -fdata-sections)
 add_link_options(-Wl,--gc-sections)
 
+find_package(Git QUIET)
+
 add_subdirectory(third_party/Play/tools/PsfPlayer/Source PsfPlayerCore)
+
+# zlib's own vendored CMakeLists.txt (third_party/Play/deps/libchdr/deps/
+# zlib-1.3.1/CMakeLists.txt), pulled in transitively by the add_subdirectory
+# above, unconditionally renames its own zconf.h -> zconf.h.included
+# whenever it finds one already checked out (a long-standing upstream zlib
+# CMake quirk -- a bare `if(EXISTS ...)`, not gated behind any option we
+# could just turn off). That leaves the nested libchdr sub-module showing
+# as locally modified after every configure. Undo it immediately rather
+# than leaving that lying around -- restoring a tracked file beats
+# patching yet another (doubly-nested) sub-module just to avoid the rename
+# in the first place.
+set(PSFPLAYER_LIBCHDR_DIR "${CMAKE_SOURCE_DIR}/third_party/Play/deps/libchdr")
+if(GIT_FOUND AND EXISTS "${PSFPLAYER_LIBCHDR_DIR}/deps/zlib-1.3.1/zconf.h.included")
+	execute_process(
+		COMMAND ${GIT_EXECUTABLE} checkout -- deps/zlib-1.3.1/zconf.h
+		WORKING_DIRECTORY "${PSFPLAYER_LIBCHDR_DIR}"
+		RESULT_VARIABLE PSFPLAYER_ZCONF_RESTORE_RESULT
+		ERROR_QUIET
+	)
+	if(PSFPLAYER_ZCONF_RESTORE_RESULT EQUAL 0)
+		file(REMOVE "${PSFPLAYER_LIBCHDR_DIR}/deps/zlib-1.3.1/zconf.h.included")
+		message(STATUS "Restored third_party/Play/deps/libchdr's zconf.h (undid zlib's own configure-time rename)")
+	endif()
+endif()
 
 # Play!'s own front-ends (ui_qt/CMakeLists.txt, ui_libretro/CMakeLists.txt)
 # each derive a PLAY_VERSION the same way -- git describe --always against
@@ -37,7 +63,6 @@ add_subdirectory(third_party/Play/tools/PsfPlayer/Source PsfPlayerCore)
 # tell which Play! commit their installed psfplayer.so is actually built
 # against.
 set(PSFPLAYER_PLAY_VERSION "unknown")
-find_package(Git QUIET)
 if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/third_party/Play/.git")
 	execute_process(
 		COMMAND ${GIT_EXECUTABLE} describe --always
