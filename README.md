@@ -26,7 +26,7 @@ harness that exercises the same code path `play()` does, without a live
 Audacious host:
 
 - `src/SoundQueue.*` — the bounded thread-safe queue bridging `CPsfVm`'s
-  own push-model background thread to Audacious's pull-model `play()`
+  own push-model background thread to Audacious' pull-model `play()`
   loop. Back-pressure (`HasFreeBuffers()`) genuinely throttles emulation
   to real-time pace.
 - `src/VmSession.*` — owns one `CPsfVm` per `play()` call. Deliberately
@@ -47,7 +47,7 @@ Audacious host:
   Cleaned up via RAII, including on load failure.
 - `src/PlaybackTimer.*` — the `CPlaybackController` length/fade/
   end-of-track policy re-expressed against elapsed sample count instead
-  of emulated video-frame ticks, since Audacious's own clock is
+  of emulated video-frame ticks, since Audacious' own clock is
   sample-based.
 
 Known limitations, not yet addressed:
@@ -80,13 +80,25 @@ heavier than the final plug-in: the whole build links Play!'s full
 emulator core, but `--gc-sections` discards everything the PSF-only path
 doesn't reach.
 
-Builds `psfplayer.so` (installs to the `audacious` plugin dir's `Input/`
-subdirectory) plus two test binaries:
+Builds `psfplayer.so` plus two test binaries:
 - `tests/test_soundqueue` — synthetic threading test for the bridge
   itself, no real PSF file needed. Run via `ctest` or directly.
 - `tests/test_integration_manual <path> [seconds]` — real end-to-end
   smoke test against an actual PSF/PSF2 file. Not run by `ctest` (no
   sample file ships with this repository).
+
+To install into Audacious' own plug-in directory (detected via
+`pkg-config`'s `audacious` package, `Input/` sub-directory), from the
+`build` directory:
+
+```
+sudo cmake --install .
+```
+
+Only one PSF-handling `InputPlugin` should be enabled at a time in
+Audacious — disable OpenPSF (or this plug-in) under Preferences → Plugins
+→ Input if both end up installed, since which one Audacious picks for a
+given file otherwise isn't deterministic.
 
 `third_party/Play` is upstream `jpd002/Play-` — no local patches. Only
 its `tools/PsfPlayer/Source` sub-tree (the `PsfCore` static library target)
