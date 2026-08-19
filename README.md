@@ -93,6 +93,31 @@ its `tools/PsfPlayer/Source` sub-tree (the `PsfCore` static library target)
 is needed; nothing in this repository builds Play!'s own emulator
 front-end/GUI.
 
+## Binary size
+
+The final size of `psfplayer.so` is noticeably larger than many similar
+plug-ins: The stripped binary is about two megabytes at time of first
+publication, while the unstripped binary is about two-and-a-half. By contrast,
+Audacious plug-ins based on OpenPSF and AOPSF are less than 200 kilobytes.
+
+This isn't dead weight left in by accident — `--gc-sections` plus
+`-Wl,--exclude-libs,ALL` (see `CMakeLists.txt`) already confirmed to prune
+every part of Play!'s full PS1/PS2/PSP emulator this plug-in doesn't
+reach (EE/VU/GS/HDD/USB/Namco-arcade/disc-image code, all of it).
+What's left is architecture, not bloat:
+
+- **The main driver, by far, is a real x86 dynamic recompiler** (Play!'s
+  `Jitter`/`CodeGen`) translating the IOP's MIPS code to native x86 at
+  run-time. OpenPSF and AOPSF both use a plain interpreter with no
+  code-generation machinery at all — that's the actual reason for the
+  size gap, not an inefficiency in either.
+- The rest is Play!'s general-purpose `Framework` base layer (streams,
+  containers, string/charset conversion) plus the IOP subsystem itself —
+  the actual PSF/PSF2 decode logic.
+- Two small, identified, optional trims exist beyond that: zstd's
+  legacy-format decoders, already applied for free via a build flag;
+  RAR-archive support, ~130KB, only removable via a sub-module patch.
+
 ## Licence
 
 2-clause BSD — see [LICENSE](LICENSE), which also reproduces Play!'s own
