@@ -51,8 +51,14 @@ Audacious host:
   sample-based.
 
 Known limitations, not yet addressed:
-- No real seek-to-time — seeking restarts from zero and fast-forwards
-  internally, discarding audio until the target.
+- No real seek-to-time (no PSF engine here exposes one) — a forwards seek
+  keeps running from wherever playback already is and fast-forwards
+  (discarding audio) to the new target; a backwards seek restarts from
+  zero first. Matches the other plug-ins' own approach. Backwards seeking
+  far into a long track is inherently slow (bound by decode speed,
+  measured at roughly 17x real-time) — a save-state-based seek was
+  considered and deliberately not pursued (arbitrary seek targets mean
+  diminishing returns for the added complexity).
 - PSP support and `.rar`-archived PSF sets are out of scope for now (see
   `src/plugin.cc`'s and `PsfSetMaterializer.h`'s own comments).
 - The hard-coded 44.1kHz output rate and RAR-archive support in Play!
@@ -86,3 +92,8 @@ subdirectory) plus two test binaries:
 its `tools/PsfPlayer/Source` sub-tree (the `PsfCore` static library target)
 is needed; nothing in this repository builds Play!'s own emulator
 front-end/GUI.
+
+## Licence
+
+2-clause BSD — see [LICENSE](LICENSE), which also reproduces Play!'s own
+2-clause BSD notice (statically linked in via `third_party/Play`).
