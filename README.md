@@ -16,9 +16,12 @@ this project can become something real users can actually install.
 
 ## Status
 
-Working prototype, validated inside a real Audacious session.
+Functional, basic plug-in, validated inside a real Audacious session.
 `third_party/Play` is a git sub-module pinned to the commit the original
-proof-of-concept evaluation was run against, with no local patches.
+proof-of-concept evaluation was run against, kept as a byte-for-byte
+upstream check-out — one small local patch (see `patches/` and "Building"
+below) is applied automatically at configure time rather than committed
+into the sub-module itself.
 
 The `InputPlugin` (`src/plugin.cc`) is implemented, builds cleanly, and
 has been validated end-to-end against real PSF2 files via a stand-alone test
@@ -61,8 +64,11 @@ Known limitations, not yet addressed:
   diminishing returns for the added complexity).
 - PSP support and `.rar`-archived PSF sets are out of scope for now (see
   `src/plugin.cc`'s and `PsfSetMaterializer.h`'s own comments).
-- The hard-coded 44.1kHz output rate and RAR-archive support in Play!
-  itself are deferred, optional future local patches — not blockers.
+- RAR-archive support in Play! itself is a deferred, optional future local
+  patch (~130KB smaller if removed) — not a blocker. (Play!'s hard-coded
+  44.1kHz output rate — even for PS2 content, where real SPU2 hardware
+  runs at 48kHz — was the same kind of deferred patch, and has since been
+  applied; see "Building" below.)
 
 ## Building
 
@@ -79,6 +85,14 @@ zstd, xxHash — dev packages). See project memory for why the compile is
 heavier than the final plug-in: the whole build links Play!'s full
 emulator core, but `--gc-sections` discards everything the PSF-only path
 doesn't reach.
+
+`cmake ..` also applies `patches/0001-48khz-output.patch` to the
+sub-module automatically (fixes PS2 output to real 48kHz SPU2 hardware
+rate, up from Play!'s own hard-coded 44.1kHz) — idempotent, safe to
+re-run, and fails the configure loudly rather than silently building
+unpatched if it ever stops applying cleanly (eg after bumping the
+`third_party/Play` pin). `third_party/Play` itself stays a byte-for-byte
+upstream check-out; nothing is committed into the sub-module directly.
 
 Builds `psfplayer.so` plus two test binaries:
 - `tests/test_soundqueue` — synthetic threading test for the bridge
@@ -100,8 +114,10 @@ Audacious — disable OpenPSF (or this plug-in) under Preferences → Plugins
 → Input if both end up installed, since which one Audacious picks for a
 given file otherwise isn't deterministic.
 
-`third_party/Play` is upstream `jpd002/Play-` — no local patches. Only
-its `tools/PsfPlayer/Source` sub-tree (the `PsfCore` static library target)
+`third_party/Play` is upstream `jpd002/Play-`, kept pristine (see
+`patches/` above for the one local patch, applied at configure time
+rather than committed into the sub-module). Only its
+`tools/PsfPlayer/Source` sub-tree (the `PsfCore` static library target)
 is needed; nothing in this repository builds Play!'s own emulator
 front-end/GUI.
 

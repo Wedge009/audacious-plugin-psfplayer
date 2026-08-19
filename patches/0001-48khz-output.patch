@@ -1,0 +1,26 @@
+diff --git a/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp b/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp
+index 2caf0099..c0de4df2 100644
+--- a/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp
++++ b/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp
+@@ -6,7 +6,7 @@
+ using namespace Iop;
+ 
+ #define FRAMES_PER_SEC (60)
+-#define SAMPLING_RATE (44100)
++#define SAMPLING_RATE (48000)
+ 
+ CPsfSubSystem::CPsfSubSystem(bool ps2Mode)
+     : m_iop(ps2Mode)
+diff --git a/tools/PsfPlayer/Source/Iop_PsfSubSystem.h b/tools/PsfPlayer/Source/Iop_PsfSubSystem.h
+index 7f49525c..84c3ab75 100644
+--- a/tools/PsfPlayer/Source/Iop_PsfSubSystem.h
++++ b/tools/PsfPlayer/Source/Iop_PsfSubSystem.h
+@@ -38,7 +38,7 @@ namespace Iop
+ 
+ 		enum
+ 		{
+-			SAMPLE_COUNT = 44,
++			SAMPLE_COUNT = 48,
+ 			BLOCK_SIZE = SAMPLE_COUNT * 2,
+ 			BLOCK_COUNT = 10,
+ 		};
