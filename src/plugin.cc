@@ -225,13 +225,20 @@ bool PsfPlayerPlugin::play(const char* filename, VFSFile& file)
 			int seekMs = check_seek();
 			if(seekMs >= 0)
 			{
-				// No PSF engine here exposes real seek-to-time -- restart from
-				// zero and fast-forward internally, discarding audio (but
-				// still advancing the fade timer) until reaching the target.
-				tags = session.Load(materializer.GetMainFilePath());
-				timer = PlaybackTimer(tags, sampleRate, ignoreLength);
-				elapsedFrames = 0;
-				targetFrames = static_cast<uint64_t>(seekMs) * sampleRate / 1000;
+				// No PSF engine here exposes real seek-to-time -- but only a
+				// genuine backwards seek needs a restart from zero. A forwards
+				// seek just keeps running the already-loaded session and lets
+				// the fast-forward-discard logic below catch up from wherever
+				// playback already is, rather than re-decoding everything
+				// before the target too.
+				uint64_t newTargetFrames = static_cast<uint64_t>(seekMs) * sampleRate / 1000;
+				if(newTargetFrames < elapsedFrames)
+				{
+					tags = session.Load(materializer.GetMainFilePath());
+					timer = PlaybackTimer(tags, sampleRate, ignoreLength);
+					elapsedFrames = 0;
+				}
+				targetFrames = newTargetFrames;
 				continue;
 			}
 
