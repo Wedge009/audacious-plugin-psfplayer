@@ -110,8 +110,9 @@ public:
 	static const char* const defaults[];
 	static const PreferencesWidget widgets[];
 	static const PluginPreferences prefs;
+	static const char about[];
 
-	static constexpr PluginInfo info = {"Play! PSF/PSF2 Decoder", nullptr, nullptr, &prefs};
+	static constexpr PluginInfo info = {"Play! PSF/PSF2 Decoder", nullptr, about, &prefs};
 
 	constexpr PsfPlayerPlugin() : InputPlugin(info, InputInfo().with_exts(exts)) {}
 
@@ -284,3 +285,20 @@ const PreferencesWidget PsfPlayerPlugin::widgets[] = {
 };
 
 const PluginPreferences PsfPlayerPlugin::prefs = {{widgets}};
+
+// Plain text only -- both the Qt and GTK about-dialogue paths pass this
+// straight through as a literal "%s" (confirmed by reading
+// libaudqt/audqt.cc and libaudgui/util.cc), so no mark-up of any kind is
+// interpreted. PSFPLAYER_PLAY_VERSION comes from `git describe --always`
+// against third_party/Play at CMake configure time (see CMakeLists.txt) --
+// same technique Play!'s own ui_qt/ui_libretro frontends use for their own
+// About text, just not something tools/PsfPlayer/Source (the only part of
+// Play! this plug-in actually builds) does itself.
+const char PsfPlayerPlugin::about[] =
+    "PSF/PSF2 decoder for Audacious, using Play!’s PsfCore\n"
+    "(https://github.com/jpd002/Play-)\n"
+    "\n"
+    "Play! PsfCore version: " PSFPLAYER_PLAY_VERSION
+    "\n"
+    "\n"
+    "Play! is Copyright © 2006-2026 Jean-Philip Desjardins.";

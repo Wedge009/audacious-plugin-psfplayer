@@ -29,6 +29,30 @@ add_link_options(-Wl,--gc-sections)
 
 add_subdirectory(third_party/Play/tools/PsfPlayer/Source PsfPlayerCore)
 
+# Play!'s own front-ends (ui_qt/CMakeLists.txt, ui_libretro/CMakeLists.txt)
+# each derive a PLAY_VERSION the same way -- git describe --always against
+# their own check-out -- but tools/PsfPlayer/Source (the only part we build)
+# never defines or references it, so there's no collision re-using the
+# identical technique here for the plug-in's own About text, so a user can
+# tell which Play! commit their installed psfplayer.so is actually built
+# against.
+set(PSFPLAYER_PLAY_VERSION "unknown")
+find_package(Git QUIET)
+if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/third_party/Play/.git")
+	execute_process(
+		COMMAND ${GIT_EXECUTABLE} describe --always
+		WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/Play"
+		RESULT_VARIABLE GIT_DESCRIBE_RESULT
+		OUTPUT_VARIABLE GIT_DESCRIBE_OUTPUT
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+		ERROR_QUIET
+	)
+	if(GIT_DESCRIBE_RESULT EQUAL 0)
+		set(PSFPLAYER_PLAY_VERSION "${GIT_DESCRIBE_OUTPUT}")
+	endif()
+endif()
+message(STATUS "Play! PsfCore version for About text: ${PSFPLAYER_PLAY_VERSION}")
+
 add_library(psfplayer MODULE
 	src/plugin.cc
 	src/SoundQueue.cc
@@ -45,6 +69,7 @@ set_target_properties(psfplayer PROPERTIES
 
 target_include_directories(psfplayer PRIVATE ${AUDACIOUS_INCLUDE_DIRS})
 target_compile_options(psfplayer PRIVATE ${AUDACIOUS_CFLAGS_OTHER})
+target_compile_definitions(psfplayer PRIVATE PSFPLAYER_PLAY_VERSION="${PSFPLAYER_PLAY_VERSION}")
 target_link_libraries(psfplayer PRIVATE PsfCore ${AUDACIOUS_LIBRARIES})
 target_link_directories(psfplayer PRIVATE ${AUDACIOUS_LIBRARY_DIRS})
 
