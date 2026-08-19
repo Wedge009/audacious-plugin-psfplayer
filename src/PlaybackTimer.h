@@ -22,12 +22,26 @@ public:
 	// ignoreLength disables the length/fade deadline entirely (matches the
 	// existing OpenPSF plug-in's "ignore_length" preference) -- IsDone()
 	// then never returns true; playback runs until externally stopped.
+	//
+	// Also reads an optional "volume" tag, but only as a fallback for PSF
+	// sets with no replaygain tag at all -- when one IS present,
+	// plugin.cc's read_tag() feeds it into Audacious's own native,
+	// user-configurable, clip-aware ReplayGain pipeline instead, and this
+	// class leaves m_baseVolume at 1.0 so the two mechanisms never both
+	// apply gain to the same file (see PlaybackTimer.cc for why: "volume"
+	// and "replaygain_track_gain" have been observed to encode the same
+	// underlying value in different units, not independent adjustments).
+	// Read unconditionally of ignoreLength when it does apply: a volume
+	// tag should still apply even with length/fade enforcement turned off.
 	PlaybackTimer(const CPsfBase::TagMap& tags, unsigned int sampleRate, bool ignoreLength);
 
 	// Advances elapsed playback by sampleFrames (stereo frames -- half the
 	// int16 count SoundQueue deals in) and returns the volume multiplier
-	// the caller should apply via VmSession::SetVolumeAdjust(): 1.0 before
-	// `length`, linearly ramping to 0.0 across `fade`, 0.0 once done.
+	// the caller should apply via VmSession::SetVolumeAdjust(): the fade
+	// base (1.0 before `length`, the "volume"-tag fallback's value if that
+	// applied, linearly ramped to 0.0 across `fade`, 0.0 once done) --
+	// matches CPlaybackController::Tick()'s own
+	// `(1.0f - currentRatio) * m_volumeAdjust`.
 	float Advance(uint64_t sampleFrames);
 
 	// True once length+fade has fully elapsed. Always false if ignoreLength
@@ -35,6 +49,7 @@ public:
 	bool IsDone() const { return m_done; }
 
 private:
+	float m_baseVolume = 1.0f; // "volume"-tag fallback only; 1.0 (no-op) otherwise
 	uint64_t m_lengthSamples = 0; // 0 means "no limit" (ignoreLength)
 	uint64_t m_fadeSamples = 0;
 	uint64_t m_elapsedSamples = 0;

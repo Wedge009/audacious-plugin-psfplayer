@@ -105,6 +105,7 @@ int main(int argc, char** argv)
 		PrintTagIfPresent(tags, "game");
 		PrintTagIfPresent(tags, "length");
 		PrintTagIfPresent(tags, "fade");
+		PrintTagIfPresent(tags, "volume");
 
 		SoundQueue& queue = session.GetQueue();
 		if(!queue.WaitForFirstWrite())

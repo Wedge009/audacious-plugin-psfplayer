@@ -84,6 +84,16 @@ bool ProbeSignature(const char* magic, int64_t len)
 	return !memcmp(magic, "PSF\x01", 4) || !memcmp(magic, "PSF\x02", 4);
 }
 
+// ReplayGain values are always plain ASCII numeric strings (e.g. "+13.86
+// dB"), never localised text -- read from the raw tag map directly rather
+// than through CPsfTags's wide-string charset decoding, which exists for
+// user-facing text like title/artist, not for this.
+const char* FindRawTag(const CPsfBase::TagMap& tags, const char* key)
+{
+	auto it = tags.find(key);
+	return (it != tags.end()) ? it->second.c_str() : nullptr;
+}
+
 // Reads the top-level file's own tags only. title/artist/game/length/fade
 // etc. are always on the top-level file by PSF convention, never on a
 // _lib sibling -- so unlike play(), this never needs the _lib chain, VFS
@@ -167,6 +177,24 @@ bool PsfPlayerPlugin::read_tag(const char* filename, VFSFile& file, Tuple& tuple
 		tuple.set_str(Tuple::Album, WStringToUtf8(tags.GetTagValue("game")).c_str());
 	if(tags.HasTag("copyright"))
 		tuple.set_str(Tuple::Copyright, WStringToUtf8(tags.GetTagValue("copyright")).c_str());
+
+	// Feeds Audacious's own native ReplayGain pipeline -- user-configurable
+	// (enable/disable, track/album/automatic mode) and clip-aware (scales
+	// gain down against the peak tag rather than clamping), unlike Play!'s
+	// own bare "volume" tag mechanism (see PlaybackTimer, which only uses
+	// that as a fallback when no replaygain tag exists at all). Matches
+	// FLAC's own REPLAYGAIN_TRACK_GAIN handling (audacious-plugins'
+	// src/flac/metadata.cc) -- raw tag values pass straight through,
+	// Tuple::set_gain()'s str_to_double() already tolerates the " dB"
+	// suffix these are conventionally written with.
+	if(const char* v = FindRawTag(rawTags, "replaygain_track_gain"))
+		tuple.set_gain(Tuple::TrackGain, Tuple::GainDivisor, v);
+	if(const char* v = FindRawTag(rawTags, "replaygain_track_peak"))
+		tuple.set_gain(Tuple::TrackPeak, Tuple::PeakDivisor, v);
+	if(const char* v = FindRawTag(rawTags, "replaygain_album_gain"))
+		tuple.set_gain(Tuple::AlbumGain, Tuple::GainDivisor, v);
+	if(const char* v = FindRawTag(rawTags, "replaygain_album_peak"))
+		tuple.set_gain(Tuple::AlbumPeak, Tuple::PeakDivisor, v);
 
 	double lengthSeconds = 60.0;
 	if(tags.HasTag("length"))
