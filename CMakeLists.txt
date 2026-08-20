@@ -78,19 +78,22 @@ function(psfplayer_apply_patch patch_file working_dir description)
 	message(STATUS "Applied local patch: ${description}")
 endfunction()
 
-# Play!'s own PsfPlayer hard-codes 44.1kHz output (a `#define` in
-# Iop_PsfSubSystem.cpp, no build option) even for PS2 content, where real
-# SPU2 hardware runs at 48kHz. Two independent constants have to change
-# together -- SAMPLING_RATE (the output/resample target) and SAMPLE_COUNT
-# (Iop_PsfSubSystem.h; actually paces how many samples get generated per
-# ~1ms of emulated CPU time -- nothing in Play!'s own code derives one
-# from the other). This is safe to change (SetDestinationSamplingRate() is
-# a pure output-resample parameter, not tied to the IOP's own interrupt/timer
-# hardware timing).
+# Started as just the 44.1kHz->48kHz output patch (a `#define` in
+# Iop_PsfSubSystem.cpp with no build option, plus a paired SAMPLE_COUNT
+# constant in Iop_PsfSubSystem.h that has to change with it -- nothing in
+# Play!'s own code derives one from the other), but has since grown to also
+# patch PsfLoader.h (private -> protected, for CPsfLoaderCustom) and, as of
+# the Gaussian-interpolation pull, Play!'s core Source/iop/Iop_SpuBase.*.
+# That last addition is why the working directory below is the Play
+# sub-module root, not tools/PsfPlayer/Source: git apply silently *skips*
+# (not fails) any hunk whose target file doesn't resolve under the given
+# working directory, so pointing this at the narrower tools/PsfPlayer/Source
+# directory would silently drop the Iop_SpuBase.* hunks with no error at
+# all -- a real bug hit in practice, not a hypothetical.
 psfplayer_apply_patch(
 	"${CMAKE_SOURCE_DIR}/patches/0001-48khz-output.patch"
-	"${CMAKE_SOURCE_DIR}/third_party/Play/tools/PsfPlayer/Source"
-	"48kHz PS2 output (was hard-coded 44.1kHz)"
+	"${CMAKE_SOURCE_DIR}/third_party/Play"
+	"48kHz output + PsfLoader.h access + Gaussian interpolation"
 )
 
 add_subdirectory(third_party/Play/tools/PsfPlayer/Source PsfPlayerCore)
