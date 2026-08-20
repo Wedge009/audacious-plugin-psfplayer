@@ -147,7 +147,8 @@ add_library(psfplayer MODULE
 	src/SoundQueue.cc
 	src/VmSession.cc
 	src/PlaybackTimer.cc
-	src/PsfSetMaterializer.cc
+	src/PsfVfsStreamProvider.cc
+	src/PsfLoaderCustom.cc
 )
 
 set_target_properties(psfplayer PROPERTIES

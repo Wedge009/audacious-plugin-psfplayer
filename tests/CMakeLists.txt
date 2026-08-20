@@ -32,7 +32,8 @@ add_executable(test_integration_manual
 	${CMAKE_SOURCE_DIR}/src/SoundQueue.cc
 	${CMAKE_SOURCE_DIR}/src/VmSession.cc
 	${CMAKE_SOURCE_DIR}/src/PlaybackTimer.cc
-	${CMAKE_SOURCE_DIR}/src/PsfSetMaterializer.cc
+	${CMAKE_SOURCE_DIR}/src/PsfVfsStreamProvider.cc
+	${CMAKE_SOURCE_DIR}/src/PsfLoaderCustom.cc
 )
 target_include_directories(test_integration_manual PRIVATE
 	${AUDACIOUS_INCLUDE_DIRS}

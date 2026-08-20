@@ -6,6 +6,8 @@
 
 #include "SoundQueue.h"
 
+struct VFSFile;
+
 // Owns one CPsfVm for the lifetime of a single InputPlugin::play() call
 // (per project memory's bridge design, point 1: one CPsfVm per play()).
 // Wraps the load/reset/resume sequence and the CSoundHandler that bridges
@@ -20,17 +22,8 @@ public:
 	VmSession(const VmSession&) = delete;
 	VmSession& operator=(const VmSession&) = delete;
 
-	// Loads mainFilePath (a real filesystem path -- see PsfSetMaterializer,
-	// since CPsfLoader::LoadPsf() offers no VFS-backed loading path) and
-	// starts emulation. May be called again on the same session to restart
-	// from zero (eg the reverse-seek pattern the existing plug-ins use, since
-	// no PSF engine here exposes real seek-to-time).
-	//
-	// Throws std::runtime_error on a malformed/unsupported file -- safe to
-	// catch here. See Load()'s definition for why this is only true
-	// because of the specific Pause()-then-direct-call ordering used, not
-	// in general for anything touching CPsfVm.
-	CPsfBase::TagMap Load(const fs::path& mainFilePath);
+	// Loads mainFilePath using the VFS interface
+	CPsfBase::TagMap Load(const std::string& uri, VFSFile *file);
 
 	// Shuts down the sound queue (waking any blocked consumer) and pauses
 	// the VM. Safe to call from any thread; idempotent; safe to call

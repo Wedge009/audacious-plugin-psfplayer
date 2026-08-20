@@ -1,7 +1,7 @@
 #include "VmSession.h"
 
-#include "PsfLoader.h"
-#include "PsfStreamProvider.h"
+#include "PsfLoaderCustom.h"
+#include "PsfVfsStreamProvider.h"
 
 VmSession::VmSession()
 {
@@ -26,7 +26,7 @@ VmSession::~VmSession()
 	// to free.
 }
 
-CPsfBase::TagMap VmSession::Load(const fs::path& mainFilePath)
+CPsfBase::TagMap VmSession::Load(const std::string& uri, VFSFile *file)
 {
 	// CPsfVm::Pause() is mailbox-marshalled and blocks until the VM thread
 	// is parked in ThreadProc()'s PAUSED branch, which only sleeps and
@@ -48,8 +48,7 @@ CPsfBase::TagMap VmSession::Load(const fs::path& mainFilePath)
 	m_vm.Reset(); // also clears m_soundQueue via CSoundHandler::Reset()
 
 	CPsfBase::TagMap tags;
-	auto pathToken = CPhysicalPsfStreamProvider::GetPathTokenFromFilePath(mainFilePath);
-	CPsfLoader::LoadPsf(m_vm, pathToken, fs::path(), &tags);
+	CPsfLoaderCustom::LoadPsfCustom(m_vm, uri, file, &tags);
 
 	m_vm.Resume();
 	return tags;

@@ -9,7 +9,6 @@
 #include "PsfTags.h"
 #include "MemStream.h"
 
-#include "PsfSetMaterializer.h"
 #include "VmSession.h"
 #include "PlaybackTimer.h"
 
@@ -217,17 +216,8 @@ bool PsfPlayerPlugin::play(const char* filename, VFSFile& file)
 
 	try
 	{
-		// LoadPsf()'s only public entry point always builds its own
-		// physical/archive stream provider internally and offers no way
-		// to inject a VFS-backed one (the per-format recursion that would
-		// need it is private -- see project memory). So the main file and
-		// everything its _lib/_lib2.. chain transitively references gets
-		// materialised to a real temp directory first, then handed to the
-		// stock physical loader unmodified.
-		PsfSetMaterializer materializer(filename, file);
-
 		VmSession session;
-		CPsfBase::TagMap tags = session.Load(materializer.GetMainFilePath());
+		CPsfBase::TagMap tags = session.Load(filename, &file);
 
 		SoundQueue& queue = session.GetQueue();
 
@@ -263,7 +253,7 @@ bool PsfPlayerPlugin::play(const char* filename, VFSFile& file)
 				uint64_t newTargetFrames = static_cast<uint64_t>(seekMs) * sampleRate / 1000;
 				if(newTargetFrames < elapsedFrames)
 				{
-					tags = session.Load(materializer.GetMainFilePath());
+					tags = session.Load(filename, &file);
 					timer = PlaybackTimer(tags, sampleRate, ignoreLength);
 					elapsedFrames = 0;
 				}

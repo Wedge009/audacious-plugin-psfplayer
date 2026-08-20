@@ -1,26 +1,68 @@
 diff --git a/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp b/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp
-index 2caf0099..c0de4df2 100644
+index 2caf0099..9fb07605 100644
 --- a/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp
 +++ b/tools/PsfPlayer/Source/Iop_PsfSubSystem.cpp
-@@ -6,7 +6,7 @@
+@@ -6,7 +6,8 @@
  using namespace Iop;
  
  #define FRAMES_PER_SEC (60)
 -#define SAMPLING_RATE (44100)
-+#define SAMPLING_RATE (48000)
++#define PS1_SAMPLING_RATE (44100)
++#define PS2_SAMPLING_RATE (48000)
  
  CPsfSubSystem::CPsfSubSystem(bool ps2Mode)
      : m_iop(ps2Mode)
+@@ -20,6 +21,10 @@ CPsfSubSystem::CPsfSubSystem(bool ps2Mode)
+ 	m_frameTicks = (cpuFreq / FRAMES_PER_SEC);
+ 	m_spuUpdateTicks = (cpuFreq / 1000);
+ 
++	SAMPLING_RATE = ps2Mode ? PS2_SAMPLING_RATE : PS1_SAMPLING_RATE;
++	SAMPLE_COUNT = ps2Mode ? PS2_SAMPLE_COUNT : PS1_SAMPLE_COUNT;
++	BLOCK_SIZE = ps2Mode ? PS2_BLOCK_SIZE : PS1_BLOCK_SIZE;
++
+ 	Reset();
+ }
+ 
 diff --git a/tools/PsfPlayer/Source/Iop_PsfSubSystem.h b/tools/PsfPlayer/Source/Iop_PsfSubSystem.h
-index 7f49525c..84c3ab75 100644
+index 7f49525c..483b658e 100644
 --- a/tools/PsfPlayer/Source/Iop_PsfSubSystem.h
 +++ b/tools/PsfPlayer/Source/Iop_PsfSubSystem.h
-@@ -38,7 +38,7 @@ namespace Iop
+@@ -36,14 +36,22 @@ namespace Iop
+ 		int m_frameCounter;
+ 		int m_spuUpdateCounter;
  
++		int SAMPLE_COUNT;
++		int BLOCK_SIZE;
++		int SAMPLING_RATE;
++
  		enum
  		{
 -			SAMPLE_COUNT = 44,
-+			SAMPLE_COUNT = 48,
- 			BLOCK_SIZE = SAMPLE_COUNT * 2,
+-			BLOCK_SIZE = SAMPLE_COUNT * 2,
++			PS1_SAMPLE_COUNT = 44,
++			PS1_BLOCK_SIZE = PS1_SAMPLE_COUNT * 2,
++
++			PS2_SAMPLE_COUNT = 48,
++			PS2_BLOCK_SIZE = PS2_SAMPLE_COUNT * 2,
++
  			BLOCK_COUNT = 10,
  		};
+ 
+-		int16 m_samples[BLOCK_SIZE * BLOCK_COUNT];
++		int16 m_samples[PS2_BLOCK_SIZE * BLOCK_COUNT];
+ 		int m_currentBlock;
+ 	};
+ 
+diff --git a/tools/PsfPlayer/Source/PsfLoader.h b/tools/PsfPlayer/Source/PsfLoader.h
+index 725bf423..71c1d4e8 100644
+--- a/tools/PsfPlayer/Source/PsfLoader.h
++++ b/tools/PsfPlayer/Source/PsfLoader.h
+@@ -20,7 +20,7 @@ class CPsfLoader
+ public:
+ 	static void LoadPsf(CPsfVm&, const CPsfPathToken&, const fs::path&, CPsfBase::TagMap* = NULL);
+ 
+-private:
++protected:
+ 	static void LoadPsx(CPsfVm&, const CPsfPathToken&, CPsfStreamProvider*, CPsfBase::TagMap* = NULL);
+ 	static void LoadPsxRecurse(CPsxBios*, CMIPS&, const CPsfPathToken&, CPsfStreamProvider*, CPsfBase::TagMap* = NULL);
+ 

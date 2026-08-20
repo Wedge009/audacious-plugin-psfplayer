@@ -1,5 +1,5 @@
 // Manual end-to-end smoke test against a REAL PSF/PSF2 file -- exercises
-// PsfSetMaterializer -> VmSession -> SoundQueue -> PlaybackTimer exactly
+// VmSession -> SoundQueue -> PlaybackTimer exactly
 // as plugin.cc's play() does, but standalone (no real Audacious host, no
 // InputPlugin::play(), no aud_init()).
 //
@@ -25,7 +25,6 @@
 
 #include <libaudcore/vfs.h>
 
-#include "PsfSetMaterializer.h"
 #include "VmSession.h"
 #include "PlaybackTimer.h"
 #include "PsfTags.h"
@@ -90,13 +89,9 @@ int main(int argc, char** argv)
 			return 1;
 		}
 
-		std::printf("Materializing (resolving _lib chain via VFS)...\n");
-		PsfSetMaterializer materializer(path, file);
-		std::printf("  main file materialised to: %s\n", materializer.GetMainFilePath().c_str());
-
 		std::printf("Loading into a real CPsfVm (Pause -> Reset -> LoadPsf -> Resume)...\n");
 		VmSession session;
-		CPsfBase::TagMap rawTags = session.Load(materializer.GetMainFilePath());
+		CPsfBase::TagMap rawTags = session.Load(path, &file);
 
 		CPsfTags tags(rawTags);
 		std::printf("Tags read:\n");
@@ -165,7 +160,7 @@ int main(int argc, char** argv)
 		// CPsfVm work cleanly, with no leak/hang/corruption from the first
 		// load still in progress?
 		std::printf("\nRestarting the same session from zero (simulates a seek)...\n");
-		session.Load(materializer.GetMainFilePath());
+		session.Load(path, &file);
 		if(!queue.WaitForFirstWrite())
 		{
 			std::fprintf(stderr, "Restart produced no audio.\n");
