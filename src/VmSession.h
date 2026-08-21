@@ -37,6 +37,7 @@ public:
 
 private:
 	CPsfVm m_vm;
+	Framework::CSignal<void()>::Connection m_onFaultConnection;
 
 	// Created via the factory passed to CPsfVm::SetSpuHandler() in the
 	// constructor. CPsfVm -- not VmSession -- owns and eventually deletes

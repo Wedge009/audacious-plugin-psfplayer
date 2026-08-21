@@ -15,6 +15,19 @@ VmSession::VmSession()
 		*outPtr = queue;
 		return queue;
 	});
+
+	// OnFault fires from CPsfVm's own background thread when Update() threw
+	// (malformed/fuzzed guest code tripping a BIOS-level sanity check) --
+	// see PsfVm.cpp/project memory. Without this, WaitAndRead() would block
+	// for ever: the VM has stopped producing audio for good, but nothing
+	// else ever calls Shutdown() to wake a blocked reader. Deliberately not
+	// reusing OnRunningStateChange for this -- that also fires on the
+	// ordinary Pause() calls Load()/Stop() make, which must NOT shut the
+	// queue down (a seek's restart still needs it usable afterwards).
+	m_onFaultConnection = m_vm.OnFault.Connect([this]() {
+		if(m_soundQueue)
+			m_soundQueue->Shutdown();
+	});
 }
 
 VmSession::~VmSession()

@@ -96,6 +96,28 @@ psfplayer_apply_patch(
 	"48kHz output + PsfLoader.h access + Gaussian interpolation"
 )
 
+# Three crash-hardening patches against a deliberately-malformed PSF test
+# corpus (fuzzed files that segfault/abort this engine but play, or at
+# least don't crash, other PSF players like Highly Experimental). Kept as
+# separate patches, one per distinct root cause, rather than folded into
+# 0001 above, since each is independently revertable/reviewable and
+# addresses an unrelated code path:
+psfplayer_apply_patch(
+	"${CMAKE_SOURCE_DIR}/patches/0002-psx-bios-bounds-checks.patch"
+	"${CMAKE_SOURCE_DIR}/third_party/Play"
+	"PSX BIOS: bounds-check RAM-derived thread/process pointers"
+)
+psfplayer_apply_patch(
+	"${CMAKE_SOURCE_DIR}/patches/0003-dma-address-bounds-check.patch"
+	"${CMAKE_SOURCE_DIR}/third_party/Play"
+	"IOP DMAC: clamp guest-controlled transfer address/length to actual RAM size"
+)
+psfplayer_apply_patch(
+	"${CMAKE_SOURCE_DIR}/patches/0004-vm-thread-exception-safety.patch"
+	"${CMAKE_SOURCE_DIR}/third_party/Play"
+	"CPsfVm: catch exceptions from Update() instead of crashing the host process"
+)
+
 add_subdirectory(third_party/Play/tools/PsfPlayer/Source PsfPlayerCore)
 
 # zlib's own vendored CMakeLists.txt (third_party/Play/deps/libchdr/deps/

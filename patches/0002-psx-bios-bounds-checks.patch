@@ -1,0 +1,43 @@
+diff --git a/Source/psx/PsxBios.cpp b/Source/psx/PsxBios.cpp
+index bdaac995..0e721060 100644
+--- a/Source/psx/PsxBios.cpp
++++ b/Source/psx/PsxBios.cpp
+@@ -361,6 +361,16 @@ CPsxBios::PROCESS* CPsxBios::GetProcess()
+ 	auto processCbTable = reinterpret_cast<CB_TABLE*>(m_ram + PCB_TABLE_ADDRESS);
+ 	assert(processCbTable->address != 0);
+ 	assert(processCbTable->size != 0);
++	// processCbTable->address is read straight out of guest RAM -- for
++	// malformed/fuzzed driver code it can be garbage. Dereferencing it
++	// unchecked reinterprets memory far outside m_ram as a PROCESS, with a
++	// segmentation fault as soon as anything reads/writes through it (confirmed via
++	// a real crash: a corrupted offset here led to a write ~2GB past the
++	// actual buffer in CPsxBios::SaveCpuState()).
++	if((processCbTable->address + sizeof(PROCESS)) > m_ramSize)
++	{
++		throw std::exception();
++	}
+ 
+ 	return reinterpret_cast<PROCESS*>(m_ram + processCbTable->address);
+ }
+@@ -369,6 +379,10 @@ void CPsxBios::SaveCpuState()
+ {
+ 	auto process = GetProcess();
+ 	assert(process->currentThreadControlBlockAddr != 0);
++	if((process->currentThreadControlBlockAddr + sizeof(THREAD)) > m_ramSize)
++	{
++		throw std::exception();
++	}
+ 
+ 	auto thread = reinterpret_cast<THREAD*>(m_ram + process->currentThreadControlBlockAddr);
+ 	assert(thread->status == THREAD_STATUS_ALLOCATED);
+@@ -388,6 +402,10 @@ void CPsxBios::LoadCpuState()
+ {
+ 	auto process = GetProcess();
+ 	assert(process->currentThreadControlBlockAddr != 0);
++	if((process->currentThreadControlBlockAddr + sizeof(THREAD)) > m_ramSize)
++	{
++		throw std::exception();
++	}
+ 
+ 	auto thread = reinterpret_cast<THREAD*>(m_ram + process->currentThreadControlBlockAddr);
+ 	assert(thread->status == THREAD_STATUS_ALLOCATED);

@@ -1,0 +1,55 @@
+diff --git a/tools/PsfPlayer/Source/PsfVm.cpp b/tools/PsfPlayer/Source/PsfVm.cpp
+index 3f400c71..fb8c3c01 100644
+--- a/tools/PsfPlayer/Source/PsfVm.cpp
++++ b/tools/PsfPlayer/Source/PsfVm.cpp
+@@ -226,9 +226,28 @@ void CPsfVm::ThreadProc()
+ 		}
+ 		else
+ 		{
+-			m_subSystem->Update(m_singleStep, m_soundHandler);
++			bool faulted = false;
++			try
++			{
++				m_subSystem->Update(m_singleStep, m_soundHandler);
++			}
++			catch(const std::exception& exception)
++			{
++				// Nothing upstream of here catches exceptions raised while
++				// emulating (this is our own background thread, spawned in
++				// the constructor) -- left uncaught, this is a guaranteed
++				// std::terminate() on malformed/fuzzed input that trips a
++				// BIOS-level sanity check (eg CPsxBios::HandleException()
++				// throwing on a non-SYSCALL exception). Stop cleanly instead:
++				// pause so this thread stops spinning on the same fault, and
++				// let OnFault tell a consumer no more audio is coming.
++				CLog::GetInstance().Print(LOG_NAME, "Uncaught exception from Update(), stopping: %s\r\n", exception.what());
++				faulted = true;
++				m_status = PAUSED;
++				OnFault();
++			}
+ #ifdef DEBUGGER_INCLUDED
+-			if(m_subSystem->MustBreak() || m_singleStep)
++			if(!faulted && (m_subSystem->MustBreak() || m_singleStep))
+ 			{
+ 				m_status = PAUSED;
+ 				m_singleStep = false;
+diff --git a/tools/PsfPlayer/Source/PsfVm.h b/tools/PsfPlayer/Source/PsfVm.h
+index 538f7d6d..6548196a 100644
+--- a/tools/PsfPlayer/Source/PsfVm.h
++++ b/tools/PsfPlayer/Source/PsfVm.h
+@@ -47,6 +47,15 @@ public:
+ 
+ 	NewFrameEvent OnNewFrame;
+ 
++	// Fired from ThreadProc() when Update() throws -- eg malformed/fuzzed
++	// guest code tripping a BIOS-level sanity check. Distinct from the
++	// inherited OnRunningStateChange/OnMachineStateChange signals (which
++	// also fire on ordinary, expected Pause() calls, eg during a normal
++	// seek-triggered reload) so a consumer can tell "the VM stopped because
++	// nothing more will ever be produced" apart from "the VM was paused as
++	// part of routine control flow".
++	Framework::CSignal<void()> OnFault;
++
+ protected:
+ 	CMailBox m_mailBox;
+ 

@@ -1,0 +1,42 @@
+diff --git a/Source/iop/Iop_DmacChannel.cpp b/Source/iop/Iop_DmacChannel.cpp
+index f20cef91..482fa58c 100644
+--- a/Source/iop/Iop_DmacChannel.cpp
++++ b/Source/iop/Iop_DmacChannel.cpp
+@@ -1,8 +1,10 @@
++#include <algorithm>
+ #include <assert.h>
+ #include "string_format.h"
+ #include "Iop_DmacChannel.h"
+ #include "Iop_Dmac.h"
+ #include "Iop_Intc.h"
++#include "../Ps2Const.h"
+ #include "../states/RegisterStateFile.h"
+ 
+ using namespace Iop;
+@@ -59,7 +61,25 @@ void CChannel::ResumeDma()
+ 	assert(m_CHCR.co == 1);
+ 	assert(m_receiveFunction);
+ 	uint32 address = m_MADR & 0x1FFFFFFF;
+-	uint32 blocksTransfered = m_receiveFunction(m_dmac.GetRam() + address, m_BCR.bs * 4, m_BCR.ba, m_CHCR.dr);
++	uint32 blockSize = m_BCR.bs * 4;
++	uint32 blockAmount = m_BCR.ba;
++	// m_MADR/m_BCR are plain guest register writes -- for malformed/fuzzed
++	// driver code they can describe a transfer starting anywhere in that
++	// 512MB mask, or one whose length runs off the end of the actual (much
++	// smaller) IOP RAM buffer m_dmac.GetRam() points at. m_receiveFunction
++	// ultimately memcpy()s through this pointer, advancing it by blockSize
++	// per block with no further bounds-checking on its own (see
++	// CSpuBase::ReceiveDma()), so both an out-of-range start address and an
++	// over-long transfer are real out-of-bounds read/write -- confirmed via
++	// a real segmentation fault inside that memcpy. Real hardware's own
++	// address bus wraps within RAM for the start address; truncate the
++	// transfer rather than let it walk off the end.
++	address &= (PS2::IOP_RAM_SIZE - 1);
++	if(blockSize != 0)
++	{
++		blockAmount = std::min<uint32>(blockAmount, (PS2::IOP_RAM_SIZE - address) / blockSize);
++	}
++	uint32 blocksTransfered = m_receiveFunction(m_dmac.GetRam() + address, blockSize, blockAmount, m_CHCR.dr);
+ 	assert(blocksTransfered <= m_BCR.ba);
+ 	m_BCR.ba -= blocksTransfered;
+ 	m_MADR += (m_BCR.bs * 4) * blocksTransfered;
